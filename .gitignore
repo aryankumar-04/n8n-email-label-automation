@@ -1,0 +1,32 @@
+# Environment and secrets
+.env
+*.env
+*.pem
+*.key
+/credentials*
+/secrets*
+*.credentials.*
+!docs/CREDENTIALS_SETUP.md
+
+# Logs and runtime traces
+*.log
+*_execution*.json
+get_workflow_*.json
+search_*.json
+output.txt
+backups/
+
+# Dependencies
+node_modules/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# IDE and AI Tooling
+.vscode/
+.idea/
+.gemini/
+scratch/
+brain/
+n8n-mcp/

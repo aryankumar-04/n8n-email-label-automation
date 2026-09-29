@@ -1,0 +1,743 @@
+{
+  "name": "Email Lable Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🚀 START HERE\n\n**Email Lable Automation**\nMonitors Gmail, classifies incoming emails using NVIDIA Nemotron AI into 5 categories, applies labels, and moves Ignore emails to Trash.\n\n### ⚡ Setup in 4 Steps:\n1. **Create Credentials** in n8n:\n   - Gmail OAuth2 (`https://www.googleapis.com/auth/gmail.modify`)\n   - NVIDIA Header Auth (`Bearer <NVIDIA_API_KEY>`)\n2. **Attach Credentials**:\n   - Gmail OAuth2: *Gmail Trigger, Get Labels, Get Label, Create Label, Label Email, Trash Email*\n   - NVIDIA Header Auth: *Classifier*\n3. **Test Run** manually to verify label creation/detection.\n4. **Activate Workflow** for 1-minute automatic polling.\n\n⚠️ *Do not activate until credentials are attached!*",
+        "height": 420,
+        "width": 320,
+        "color": 5
+      },
+      "id": "sticky-start-here",
+      "name": "Sticky Note - START HERE",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -120,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 1 | Trigger & Label Cache Check\n- **Gmail Trigger**: Polls every minute for new messages (Simple = OFF).\n- **Get Labels**: Fetches live labels from Gmail (Execute Once = ON).\n- **Check Labels**: Config source of truth (5 label names, colors, categories). Checks static `labelCache` against live Gmail list.\n- **Labels OK?**: If all 5 labels match live IDs → Prepare; otherwise → What Went Wrong.",
+        "height": 270,
+        "width": 640,
+        "color": 6
+      },
+      "id": "sticky-sec-1",
+      "name": "Sticky Note - Section 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        210,
+        -250
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 2 | Self-Healing Label Manager\n- **What Went Wrong**: Categorizes issues into `ID_PROBLEM` (exists in Gmail with different ID) or `MISSING` (absent).\n- **Problem Type?**: Routes to Get Label or Create Label.\n- **Get Label / Create Label**: Fetches live ID or creates label via Gmail REST API with background & text colors.\n- **Merge Fixes & Update**: Merges resolved pairs, stores into static data (`labelCache`), and continues to Prepare once.",
+        "height": 420,
+        "width": 860,
+        "color": 2
+      },
+      "id": "sticky-sec-2",
+      "name": "Sticky Note - Section 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        210,
+        50
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 3 | Prepare & Loop\n- **Prepare**: Reads emails from Gmail Trigger, filters out SENT and DRAFT messages, and extracts 1500-char body snippets.\n- **Loop**: Split In Batches (size 1) processes incoming bursts of emails sequentially.",
+        "height": 420,
+        "width": 280,
+        "color": 7
+      },
+      "id": "sticky-sec-3",
+      "name": "Sticky Note - Section 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1080,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 4 | AI Classification (NVIDIA NIM)\n- **Classifier**: Calls `nvidia/nemotron-3-ultra-550b-a55b` via NVIDIA API with prompt & snippet (retries 3x).\n- **Parse**: Strips `<think>` tags, extracts category, resolves label name & cached ID. Safely falls back to **⚡ Action** on error.",
+        "height": 260,
+        "width": 280,
+        "color": 4
+      },
+      "id": "sticky-sec-4",
+      "name": "Sticky Note - Section 4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1430,
+        -150
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 5 | Actions, Trash & Safety Guard\n- **Label Email**: Applies resolved `labelId` to message in Gmail.\n- **Clear Cache and stop**: On label failure, purges `labelCache` and fails execution so next run rebuilds.\n- **Is Ignore? & Trash Email**: If classified as `🗑️ Ignore`, moves to Trash (recoverable 30 days). Loops back for remaining queue.",
+        "height": 520,
+        "width": 480,
+        "color": 1
+      },
+      "id": "sticky-sec-5",
+      "name": "Sticky Note - Section 5",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1630,
+        -150
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### 🔑 Credentials Required\nAttach credentials before running:\n\n| Node | Type | Scope / Header |\n|---|---|---|\n| **Gmail Nodes** | Gmail OAuth2 | `https://www.googleapis.com/auth/gmail.modify` |\n| **Classifier** | Header Auth | `Authorization: Bearer <NVIDIA_API_KEY>` |\n\n*Create in n8n: Credentials > Add Credential.*",
+        "height": 250,
+        "width": 280,
+        "color": 3
+      },
+      "id": "sticky-sec-creds",
+      "name": "Sticky Note - Credentials",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1430,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "id": "979da213-4e6c-420e-bcd2-d4f76cfdd6dd",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        240,
+        -176
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Select your Gmail OAuth2 credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "returnAll": true
+      },
+      "id": "493f69f3-ef2c-46f1-aa1c-e43c3030908d",
+      "name": "Get Labels",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        -176
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Select your Gmail OAuth2 credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const CONFIG = [\n  { name: '⚡ Action', bg: '#cc3a21', text: '#ffffff', categories: ['Urgent', 'Action', 'Legal', 'Security', 'OTP', 'Auth'] },\n  { name: '💼 Work', bg: '#285bac', text: '#ffffff', categories: ['Work', 'Meeting'] },\n  { name: '👤 Personal', bg: '#16a766', text: '#ffffff', categories: ['Personal', 'Social', 'Travel'] },\n  { name: '💵 Finance', bg: '#fad165', text: '#000000', categories: ['Finance', 'Receipts', 'Shipping'] },\n  { name: '🗑️ Ignore', bg: '#666666', text: '#ffffff', categories: ['Newsletters', 'Reading', 'Alerts', 'Promos', 'Spam'] }\n];\n\nconst staticData = $getWorkflowStaticData('global');\nconst labelCache = staticData.labelCache || {};\n\nconst liveItems = $input.all();\nconst liveMap = {};\nconst liveList = [];\n\nfor (const item of liveItems) {\n  const d = item.json;\n  if (d && d.name && d.id) {\n    liveMap[d.name] = d.id;\n    liveList.push({ id: d.id, name: d.name });\n  }\n}\n\nconst checks = [];\nlet allOk = true;\n\nfor (const cfg of CONFIG) {\n  const cachedId = labelCache[cfg.name] || null;\n  const liveId = liveMap[cfg.name] || null;\n  const ok = Boolean(cachedId && liveId && cachedId === liveId);\n  if (!ok) allOk = false;\n  checks.push({\n    name: cfg.name,\n    cachedId,\n    liveId,\n    ok,\n    bg: cfg.bg,\n    text: cfg.text\n  });\n}\n\nreturn [{\n  json: {\n    ok: allOk,\n    checks,\n    live: liveList,\n    config: CONFIG\n  }\n}];"
+      },
+      "id": "8971d62a-919d-4954-a8e3-72071ae5030d",
+      "name": "Check Labels",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "rightValue": true,
+              "id": "84770d98-da7e-4e18-8e24-efcb93af8e2e"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "05331f14-3ae3-4ad6-adb0-3dcfe1fc5cd9",
+      "name": "Labels OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        688,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function stripHtml(html) {\n  if (!html) return '';\n  return html.replace(/<[^>]*>?/gm, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nlet triggerItems = [];\ntry {\n  triggerItems = $('Gmail Trigger').all();\n} catch (e) {\n  triggerItems = [];\n}\n\nconst results = [];\n\nfor (const item of triggerItems) {\n  const email = item.json || {};\n  const labelIds = email.labelIds || [];\n\n  // Skip SENT and DRAFT messages\n  if (labelIds.includes('SENT') || labelIds.includes('DRAFT')) {\n    continue;\n  }\n\n  let fromStr = email.from;\n  if (typeof fromStr === 'object' && fromStr !== null) {\n    fromStr = fromStr.text || (fromStr.value && fromStr.value[0] && fromStr.value[0].address) || JSON.stringify(fromStr);\n  }\n\n  let body = email.textPlain || email.text || '';\n  if (!body && (email.textHtml || email.html)) {\n    body = stripHtml(email.textHtml || email.html);\n  }\n  if (!body && email.snippet) {\n    body = email.snippet;\n  }\n\n  const snippet = (body || '').slice(0, 1500);\n\n  results.push({\n    json: {\n      messageId: email.id,\n      threadId: email.threadId,\n      subject: email.subject || '(No Subject)',\n      from: fromStr || '',\n      snippet\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "2950a15b-b2e5-4a11-b2f0-c14b517880e4",
+      "name": "Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst checks = (item && item.json && item.json.checks) || [];\nconst problems = [];\n\nfor (const c of checks) {\n  if (!c.ok) {\n    if (c.liveId) {\n      problems.push({\n        json: {\n          problem: 'ID_PROBLEM',\n          name: c.name,\n          id: c.liveId,\n          color: { backgroundColor: c.bg, textColor: c.text }\n        }\n      });\n    } else {\n      problems.push({\n        json: {\n          problem: 'MISSING',\n          name: c.name,\n          color: { backgroundColor: c.bg, textColor: c.text }\n        }\n      });\n    }\n  }\n}\n\nreturn problems;"
+      },
+      "id": "e1b816fa-6fd6-423a-ad66-9bb3dc1c09d4",
+      "name": "What Went Wrong",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.problem }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "ID_PROBLEM",
+                    "id": "292939a5-3d6b-41a0-9753-6fab0a68594a"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.problem }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "MISSING",
+                    "id": "1f9a63b4-213e-4478-991f-af3f783afb87"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7e3592a1-139f-4ce2-af5f-25f402a3d7f0",
+      "name": "Problem Type?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        400,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "operation": "get",
+        "labelId": "={{ $json.id }}"
+      },
+      "id": "b73f660a-55cb-4a04-8408-e5501b67a8ca",
+      "name": "Get Label",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        112
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Select your Gmail OAuth2 credential"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "8be0088e-1582-44ec-9af0-411c1c3bc8e7",
+      "name": "Merge Fixes",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        816,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/labels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: $json.name, labelListVisibility: \"labelShow\", messageListVisibility: \"show\", color: { backgroundColor: $json.color.backgroundColor, textColor: $json.color.textColor } }) }}",
+        "options": {}
+      },
+      "id": "7936a1f7-0706-4c83-8339-80c160ef5d2d",
+      "name": "Create Label",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        624,
+        352
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Select your Gmail OAuth2 credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nif (!staticData.labelCache) {\n  staticData.labelCache = {};\n}\n\nconst items = $input.all();\nfor (const item of items) {\n  const d = item.json;\n  if (d && d.name && d.id) {\n    staticData.labelCache[d.name] = d.id;\n  }\n}\n\nreturn [{\n  json: {\n    updated: true,\n    labelCache: staticData.labelCache\n  }\n}];"
+      },
+      "id": "a191e06a-d046-4d69-8701-df7e5b773316",
+      "name": "Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "ecd6b8d8-7982-469f-bc33-22603431f732",
+      "name": "Loop",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1232,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://integrate.api.nvidia.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'nvidia/nemotron-3-ultra-550b-a55b', temperature: 0, max_tokens: 256, stream: false, chat_template_kwargs: { enable_thinking: false }, messages: [ { role: 'system', content: 'You classify emails into exactly one of these 5 categories and respond with ONLY a JSON object like {\\\"category\\\": \\\"Action\\\"} — no reasoning, no explanation, no extra text before or after the JSON.\\n\\nCategories:\\n\\nAction = urgent items, required actions, legal matters, security alerts, OTP codes, or authentication requests, from identifiable real services/people about the user\\'s own actual account (NOT generic broadcast-style fake urgency, fake rewards, or fake account warnings from bulk senders — those are Ignore).\\nWork = work-related correspondence or meetings.\\nPersonal = personal correspondence, social platform notifications, or travel bookings/itineraries.\\nFinance = finance-related emails, receipts, invoices, or shipping/delivery notifications from a real transaction.\\nIgnore = newsletters, reading material, non-critical alerts, promotions, marketing, or spam/phishing, including deceptive urgent-sounding broadcast emails from bulk or unfamiliar senders.' }, { role: 'user', content: 'From: ' + ($json.from || '') + '\\nSubject: ' + ($json.subject || '') + '\\nBody: ' + ($json.snippet || '') } ] }) }}",
+        "options": {}
+      },
+      "id": "516ff5ea-9281-43da-817e-cf244e144354",
+      "name": "Classifier",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1456,
+        -64
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "Select your NVIDIA Header Auth credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst labelCache = staticData.labelCache || {};\n\nlet loopItem = {};\ntry {\n  loopItem = $('Loop').item.json || {};\n} catch (e) {\n  loopItem = {};\n}\n\nconst messageId = loopItem.messageId || '';\nconst threadId = loopItem.threadId || '';\nconst subject = loopItem.subject || '';\n\nlet configList = [];\ntry {\n  configList = $('Check Labels').first().json.config || [];\n} catch (e) {\n  configList = [];\n}\n\nconst categoryToLabel = {\n  'action': '⚡ Action',\n  'work': '💼 Work',\n  'personal': '👤 Personal',\n  'finance': '💵 Finance',\n  'ignore': '🗑️ Ignore'\n};\n\nfor (const cfg of configList) {\n  if (cfg.name) {\n    categoryToLabel[cfg.name.toLowerCase()] = cfg.name;\n    categoryToLabel[cfg.name.replace(/^[^\\w]+/, '').trim().toLowerCase()] = cfg.name;\n  }\n  if (Array.isArray(cfg.categories)) {\n    for (const cat of cfg.categories) {\n      categoryToLabel[cat.toLowerCase()] = cfg.name;\n    }\n  }\n}\n\nconst currentItem = $json;\nlet rawContent = '';\n\nif (currentItem.choices && currentItem.choices[0] && currentItem.choices[0].message) {\n  rawContent = currentItem.choices[0].message.content || '';\n} else if (typeof currentItem === 'string') {\n  rawContent = currentItem;\n} else if (currentItem.text) {\n  rawContent = currentItem.text;\n} else if (currentItem.error) {\n  rawContent = '';\n}\n\n// Strip <think>...</think> block\nrawContent = rawContent.replace(/<think>[\\s\\S]*?<\\/think>/gi, '').trim();\n\nlet extractedCategory = null;\nlet fallback = false;\n\n// Attempt 1: Extract JSON {\"category\": \"...\"}\nconst jsonMatch = rawContent.match(/\\{[\\s\\S]*?\"category\"\\s*:\\s*\"([^\"]+)\"[\\s\\S]*?\\}/i);\nif (jsonMatch && jsonMatch[1]) {\n  extractedCategory = jsonMatch[1].trim();\n} else {\n  // Attempt 2: Direct parse of substring\n  const bracketMatch = rawContent.match(/\\{[\\s\\S]*\\}/);\n  if (bracketMatch) {\n    try {\n      const parsed = JSON.parse(bracketMatch[0]);\n      if (parsed.category) {\n        extractedCategory = String(parsed.category).trim();\n      }\n    } catch (e) {}\n  }\n}\n\n// Attempt 3: Regex fallback for bare category word\nif (!extractedCategory) {\n  const wordMatch = rawContent.match(/\\b(action|work|personal|finance|ignore)\\b/i);\n  if (wordMatch) {\n    extractedCategory = wordMatch[1];\n  }\n}\n\nlet resolvedLabelName = null;\nif (extractedCategory) {\n  const normalizedCat = extractedCategory.toLowerCase();\n  resolvedLabelName = categoryToLabel[normalizedCat] || null;\n}\n\nif (!resolvedLabelName) {\n  resolvedLabelName = '⚡ Action';\n  extractedCategory = extractedCategory || 'Unknown';\n  fallback = true;\n}\n\nlet resolvedLabelId = labelCache[resolvedLabelName] || null;\n\nif (!resolvedLabelId) {\n  try {\n    const checkItem = $('Check Labels').first().json || {};\n    const liveList = checkItem.live || [];\n    const found = liveList.find(l => l.name === resolvedLabelName);\n    if (found && found.id) {\n      resolvedLabelId = found.id;\n    }\n  } catch (e) {}\n}\n\nreturn {\n  messageId,\n  threadId,\n  subject,\n  category: extractedCategory,\n  labelName: resolvedLabelName,\n  labelId: resolvedLabelId,\n  fallback\n};"
+      },
+      "id": "65638508-3ee2-4ebc-9933-b2fb64d79d35",
+      "name": "Parse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Parse').item.json.messageId }}",
+        "labelIds": [
+          "={{ $('Parse').item.json.labelId }}"
+        ]
+      },
+      "id": "661bc894-14cc-4eb3-8ae7-3d0db33fc471",
+      "name": "Label Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1728,
+        -64
+      ],
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Select your Gmail OAuth2 credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Parse').item.json.labelName }}",
+              "operator": {
+                "operation": "equals",
+                "type": "string"
+              },
+              "rightValue": "🗑️ Ignore",
+              "id": "f98e3331-beb4-4982-a006-ed96fc964589"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b6238cfe-0f15-4cf7-9a40-4d68fbd86d54",
+      "name": "Is Ignore",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1664,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://gmail.googleapis.com/gmail/v1/users/me/messages/' + $('Parse').item.json.messageId + '/trash' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {}
+      },
+      "id": "152db3e6-517b-4258-9ac4-75f4485298b8",
+      "name": "Trash Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1904,
+        256
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Select your Gmail OAuth2 credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\ndelete staticData.labelCache;\n\nconst parseItem = $('Parse').first() ? $('Parse').first().json : {};\nconst err = $json && $json.error ? $json.error.message : 'Label Email failed';\n\nthrow new Error(`Label Email failed for messageId ${parseItem.messageId || 'unknown'}: ${err}. Cache cleared.`);"
+      },
+      "id": "65c3544d-32db-446b-8a19-dde3454f0f77",
+      "name": "Clear Cache and stop",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -48
+      ]
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Labels": {
+      "main": [
+        [
+          {
+            "node": "Check Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Labels": {
+      "main": [
+        [
+          {
+            "node": "Labels OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Labels OK?": {
+      "main": [
+        [
+          {
+            "node": "Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "What Went Wrong",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "What Went Wrong": {
+      "main": [
+        [
+          {
+            "node": "Problem Type?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Problem Type?": {
+      "main": [
+        [
+          {
+            "node": "Get Label",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Label": {
+      "main": [
+        [
+          {
+            "node": "Merge Fixes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Fixes": {
+      "main": [
+        [
+          {
+            "node": "Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Label": {
+      "main": [
+        [
+          {
+            "node": "Merge Fixes",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Update": {
+      "main": [
+        [
+          {
+            "node": "Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare": {
+      "main": [
+        [
+          {
+            "node": "Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop": {
+      "main": [
+        null,
+        [
+          {
+            "node": "Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classifier": {
+      "main": [
+        [
+          {
+            "node": "Parse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse": {
+      "main": [
+        [
+          {
+            "node": "Label Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Label Email": {
+      "main": [
+        [
+          {
+            "node": "Is Ignore",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Clear Cache and stop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Ignore": {
+      "main": [
+        [
+          {
+            "node": "Trash Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trash Email": {
+      "main": [
+        [
+          {
+            "node": "Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": {}
+}
